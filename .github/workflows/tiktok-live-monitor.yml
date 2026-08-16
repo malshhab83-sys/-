@@ -4,10 +4,6 @@ on:
   schedule:
     - cron: "2-59/5 * * * *"
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/tiktok-live-monitor.yml"
 
 permissions:
   contents: read
@@ -63,47 +59,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_USER: "@oiiim1"
-          ALERT_TITLE: "🔴 TikTok LIVE: @oiiim1"
+          ALERT_TITLE: "TikTok LIVE: @oiiim1"
           ASSIGNEE: "malshhab83-sys"
           STATUS: ${{ steps.check.outputs.status }}
-          EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
-          if [ "$EVENT_NAME" = "push" ]; then
-            ALERT_TITLE="🧪 اختبار تنبيه TikTok LIVE"
-            STATUS="live"
-          fi
-
           existing="$(gh issue list \
             --repo "$GITHUB_REPOSITORY" \
             --state open \
             --limit 100 \
             --json number,title \
-            | python -c 'import json, os, sys; xs=json.load(sys.stdin); title=os.environ.get("ALERT_TITLE", ""); print(next((str(x["number"]) for x in xs if x["title"] == title), ""))')"
+            | python -c 'import json, os, sys; xs=json.load(sys.stdin); title=os.environ["ALERT_TITLE"]; print(next((str(x["number"]) for x in xs if x["title"] == title), ""))')"
 
           if [ "$STATUS" = "live" ]; then
             if [ -z "$existing" ]; then
-              if [ "$EVENT_NAME" = "push" ]; then
-                gh issue create \
-                  --repo "$GITHUB_REPOSITORY" \
-                  --title "$ALERT_TITLE" \
-                  --assignee "$ASSIGNEE" \
-                  --body "هذا **اختبار مؤقت** للتأكد أن تنبيهات المراقب تصل إلى بريدك. ليس معناه أن @oiiim1 يبث الآن."
-              else
-                gh issue create \
-                  --repo "$GITHUB_REPOSITORY" \
-                  --title "$ALERT_TITLE" \
-                  --assignee "$ASSIGNEE" \
-                  --body "الحساب **$TARGET_USER** ظهر الآن في بث TikTok LIVE.\n\nافتح البث: https://www.tiktok.com/$TARGET_USER/live\n\nالمراقب يفحص الحالة كل 5 دقائق تقريبًا."
-              fi
+              gh issue create \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "$ALERT_TITLE" \
+                --assignee "$ASSIGNEE" \
+                --body "@oiiim1 is LIVE on TikTok now. Open: https://www.tiktok.com/@oiiim1/live"
             else
-              echo "Alert already open as issue #$existing; no duplicate notification."
+              echo "LIVE alert already open as issue #$existing; no duplicate notification."
             fi
           elif [ "$STATUS" = "offline" ]; then
             if [ -n "$existing" ]; then
               gh issue close "$existing" \
                 --repo "$GITHUB_REPOSITORY" \
-                --comment "البث غير متاح الآن. تم إعادة تسليح المراقب وسيصدر تنبيه جديد عند LIVE القادم."
+                --comment "The LIVE is no longer available. The monitor is armed for the next LIVE."
             else
               echo "Offline and already armed."
             fi
